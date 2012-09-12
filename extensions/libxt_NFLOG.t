@@ -1,0 +1,16 @@
+:INPUT,FORWARD,OUTPUT
+-j NFLOG --nflog-group 1;=;OK
+-j NFLOG --nflog-group 65535;=;OK
+-j NFLOG --nflog-group 65536;;FAIL
+-j NFLOG --nflog-group 0;-j NFLOG;OK
+-j NFLOG --nflog-range 1;=;OK
+-j NFLOG --nflog-range 4294967295;=;OK
+-j NFLOG --nflog-range 4294967296;;FAIL
+-j NFLOG --nflog-range -1;;FAIL
+-j NFLOG --nflog-prefix xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx;=;OK
+-j NFLOG --nflog-prefix xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx;;FAIL
+-j NFLOG --nflog-threshold 1;=;OK
+-j NFLOG --nflog-threshold 0;;FAIL
+-j NFLOG --nflog-threshold 65535;=;OK
+-j NFLOG --nflog-threshold 65536;;FAIL
+-j NFLOG;=;OK
