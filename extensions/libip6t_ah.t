@@ -1,0 +1,12 @@
+:INPUT,FORWARD,OUTPUT
+-m ah --ahspi 0;=;OK
+-m ah --ahspi 4294967295;=;OK
+-m ah --ahspi 0:4294967295;-m ah;OK
+-m ah ! --ahspi 0;=;OK
+-m ah --ahres;=;OK
+-m ah --ahlen 32;=;OK
+-m ah --ahspi -1;;FAIL
+-m ah --ahspi 4294967296;;FAIL
+-m ah --ahspi invalid;;FAIL
+-m ah --ahspi 0:invalid;;FAIL
+-m ah --ahspi;;FAIL

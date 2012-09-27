@@ -1,0 +1,11 @@
+:INPUT,FORWARD,OUTPUT
+-m string --algo bm --string "test";=;OK
+-m string --algo kmp --string "test";=;OK
+-m string --algo kmp ! --string "test";=;OK
+-m string --algo bm --string "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx";=;OK
+-m string --algo bm --string "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx";=;OK
+-m string --algo bm --hexstring "|0a0a0a0a|";=;OK
+-m string --algo bm --from 0 --to 65535 --string "test";=;OK
+-m string --algo wrong;;FAIL
+-m string --algo bm;;FAIL
+-m string;;FAIL
