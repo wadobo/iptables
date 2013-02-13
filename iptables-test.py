@@ -9,11 +9,15 @@
 #
 # This software has been sponsored by Sophos Astaro <http://www.sophos.com>
 #
-import sys, os, subprocess, re
+
+import sys
+import os
+import subprocess
 
 IPTABLES = "iptables"
 IP6TABLES = "ip6tables"
 EXTENSIONS_PATH = "extensions"
+
 
 class colors:
     HEADER = '\033[95m'
@@ -23,8 +27,11 @@ class colors:
     RED = '\033[91m'
     ENDC = '\033[0m'
 
+
 def print_error(filename, lineno, reason):
-    print filename + ": " + colors.RED + "ERROR" + colors.ENDC + ": line %d (%s)" %(lineno, reason)
+    print (filename + ": " + colors.RED + "ERROR" +
+           colors.ENDC + ": line %d (%s)" % (lineno, reason))
+
 
 def delete_rule(iptables, rule, filename, lineno, devnull):
     cmd = iptables + " -D " + rule
@@ -36,6 +43,7 @@ def delete_rule(iptables, rule, filename, lineno, devnull):
 
     return 0
 
+
 def run_test(iptables, rule, rule_save, res, filename, lineno, devnull):
     ret = 0
 
@@ -45,7 +53,7 @@ def run_test(iptables, rule, rule_save, res, filename, lineno, devnull):
     #
     # report failed test
     #
-    if ret <> 0:
+    if ret:
         if res == "OK":
             reason = "cannot load: " + cmd
             print_error(filename, lineno, reason)
@@ -61,7 +69,8 @@ def run_test(iptables, rule, rule_save, res, filename, lineno, devnull):
             return -1
 
     matching = 0
-    proc = subprocess.Popen(iptables + "-save", stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    proc = subprocess.Popen(iptables + "-save", stdin=subprocess.PIPE,
+                            stdout=subprocess.PIPE, stderr=subprocess.PIPE)
     out, err = proc.communicate()
 
     #
@@ -82,8 +91,10 @@ def run_test(iptables, rule, rule_save, res, filename, lineno, devnull):
 
     return delete_rule(iptables, rule, filename, lineno, devnull)
 
+
 def execute_cmd(external_cmd, devnull):
     subprocess.call(external_cmd, stderr=devnull, shell=True)
+
 
 def run_test_file(filename):
     tests = 0
@@ -92,7 +103,7 @@ def run_test_file(filename):
     #
     # if this is not a test file, skip.
     #
-    if filename[len(filename)-2:] <> ".t":
+    if filename[len(filename)-2:] != ".t":
         return 0, 0
 
     if filename.find("libipt_") > 0:
@@ -114,7 +125,7 @@ def run_test_file(filename):
     total_test_passed = True
 
     # FIXME: better store standard error output in one log filename
-    devnull = open("/dev/null","w")
+    devnull = open("/dev/null", "w")
 
     for line in f:
         lineno = lineno + 1
@@ -158,16 +169,17 @@ def run_test_file(filename):
 
             res = item[2].rstrip()
 
-            ret = run_test(iptables, rule, rule_save, res, filename, lineno, devnull)
+            ret = run_test(iptables, rule, rule_save,
+                           res, filename, lineno, devnull)
             if ret < 0:
                 test_passed = False
                 total_test_passed = False
                 break
 
-        if test_passed == True:
+        if test_passed:
             passed = passed + 1
 
-    if total_test_passed == True:
+    if total_test_passed:
         print filename + ": " + colors.GREEN + "OK" + colors.ENDC
 
     f.close()
@@ -201,9 +213,9 @@ if len(sys.argv) == 2 and sys.argv[1] == "-m":
             for x in file_list:
                 if x == test_file:
                     found = True
-                    break;
+                    break
 
-            if found == False:
+            if not found:
                 print test_file
 
     sys.exit()
@@ -224,10 +236,11 @@ if len(sys.argv) == 2:
 else:
     file_list = os.listdir(EXTENSIONS_PATH)
     for filename in file_list:
-        file_tests, file_passed = run_test_file(EXTENSIONS_PATH + "/" + filename)
+        file_tests, file_passed = run_test_file(EXTENSIONS_PATH +
+                                                "/" + filename)
         if file_tests:
             tests = tests + file_tests
             passed = passed + file_passed
             test_files = test_files + 1
 
-print "%d test files, %d unit tests, %d passed" %(test_files, tests, passed)
+print "%d test files, %d unit tests, %d passed" % (test_files, tests, passed)
