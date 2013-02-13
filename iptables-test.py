@@ -98,13 +98,10 @@ def execute_cmd(external_cmd, devnull):
 
 
 def run_test_file(filename):
-    tests = 0
-    passed = 0
-
     #
     # if this is not a test file, skip.
     #
-    if filename[len(filename)-2:] != ".t":
+    if not filename.endswith(".t"):
         return 0, 0
 
     if filename.find("libipt_") > 0:
@@ -119,18 +116,15 @@ def run_test_file(filename):
 
     f = open(filename)
 
-    lineno = 0
-    chain = ""
+    tests = 0
+    passed = 0
     table = ""
-    external_cmd = ""
     total_test_passed = True
 
     # FIXME: better store standard error output in one log filename
     devnull = open("/dev/null", "w")
 
-    for line in f:
-        lineno = lineno + 1
-
+    for lineno, line in enumerate(f):
         if line[0] == "#":
             continue
 
@@ -153,10 +147,9 @@ def run_test_file(filename):
             sys.exit()
 
         test_passed = True
-        tests = tests + 1
+        tests += 1
 
         for chain in chain_array:
-
             item = line.split(";")
             if table == "":
                 rule = chain + " " + item[0]
@@ -171,14 +164,14 @@ def run_test_file(filename):
             res = item[2].rstrip()
 
             ret = run_test(iptables, rule, rule_save,
-                           res, filename, lineno, devnull)
+                           res, filename, lineno + 1, devnull)
             if ret < 0:
                 test_passed = False
                 total_test_passed = False
                 break
 
         if test_passed:
-            passed = passed + 1
+            passed += 1
 
     if total_test_passed:
         print filename + ": " + Colors.GREEN + "OK" + Colors.ENDC
