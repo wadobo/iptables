@@ -13,13 +13,14 @@
 import sys
 import os
 import subprocess
+import argparse
 
 IPTABLES = "iptables"
 IP6TABLES = "ip6tables"
 EXTENSIONS_PATH = "extensions"
 
 
-class colors:
+class Colors:
     HEADER = '\033[95m'
     BLUE = '\033[94m'
     GREEN = '\033[92m'
@@ -29,8 +30,8 @@ class colors:
 
 
 def print_error(filename, lineno, reason):
-    print (filename + ": " + colors.RED + "ERROR" +
-           colors.ENDC + ": line %d (%s)" % (lineno, reason))
+    print (filename + ": " + Colors.RED + "ERROR" +
+           Colors.ENDC + ": line %d (%s)" % (lineno, reason))
 
 
 def delete_rule(iptables, rule, filename, lineno, devnull):
@@ -180,67 +181,72 @@ def run_test_file(filename):
             passed = passed + 1
 
     if total_test_passed:
-        print filename + ": " + colors.GREEN + "OK" + colors.ENDC
+        print filename + ": " + Colors.GREEN + "OK" + Colors.ENDC
 
     f.close()
     devnull.close()
     return tests, passed
 
+
+def show_missing():
+    '''
+    Show the list of missing test files
+    '''
+    file_list = os.listdir(EXTENSIONS_PATH)
+    testfiles = [i for i in file_list if i.endswith('.t')]
+    libfiles = [i for i in file_list
+                if i.startswith('lib') and i.endswith('.c')]
+
+    def test_name(x):
+        return x[0:-2] + '.t'
+    missing = [test_name(i) for i in libfiles
+               if not test_name(i) in testfiles]
+
+    print '\n'.join(missing)
+
+
 #
 # main
 #
+def main():
+    parser = argparse.ArgumentParser(description='Run iptables tests')
+    parser.add_argument('filename', nargs='?',
+                        metavar='path/to/file.t',
+                        help='Run only this test')
+    parser.add_argument('-m', '--missing', action='store_true',
+                        help='Check for missing tests')
+    args = parser.parse_args()
 
-if len(sys.argv) > 2:
-    print "Usage: " + sys.argv[0] + "\t\t\tRun all test"
-    print "Usage: " + sys.argv[0] + "[path/to/file.t]\tRun test"
-    print "Usage: " + sys.argv[0] + "-M\t\t\tCheck for missing tests"
-    sys.exit()
+    #
+    # show list of missing test files
+    #
+    if args.missing:
+        show_missing()
+        return
 
-#
-# show list of missing test files
-#
-if len(sys.argv) == 2 and sys.argv[1] == "-m":
-    file_list = os.listdir(EXTENSIONS_PATH)
+    if os.getuid() != 0:
+        print "You need to be root to run this, sorry"
+        return
+
+    test_files = 0
+    tests = 0
+    passed = 0
+
+    file_list = [os.path.join(EXTENSIONS_PATH, i)
+                 for i in os.listdir(EXTENSIONS_PATH)]
+    if args.filename:
+        file_list = [args.filename]
+
     for filename in file_list:
-        if filename[-2:None] == ".t":
-            continue
-        if filename[0:3] == "lib" and filename[-2:None] == ".c":
-            #
-            # now find if there's a test for it
-            #
-            found = False
-            test_file = filename[0:-2] + ".t"
-            for x in file_list:
-                if x == test_file:
-                    found = True
-                    break
-
-            if not found:
-                print test_file
-
-    sys.exit()
-
-if os.getuid() != 0:
-    print "You need to be root to run this, sorry"
-    sys.exit()
-
-test_files = 0
-tests = 0
-passed = 0
-
-if len(sys.argv) == 2:
-    file_tests, file_passed = run_test_file(sys.argv[1])
-    tests = tests + file_tests
-    passed = passed + file_passed
-    test_files = test_files + 1
-else:
-    file_list = os.listdir(EXTENSIONS_PATH)
-    for filename in file_list:
-        file_tests, file_passed = run_test_file(EXTENSIONS_PATH +
-                                                "/" + filename)
+        file_tests, file_passed = run_test_file(filename)
         if file_tests:
-            tests = tests + file_tests
-            passed = passed + file_passed
-            test_files = test_files + 1
+            tests += file_tests
+            passed += file_passed
+            test_files += 1
 
-print "%d test files, %d unit tests, %d passed" % (test_files, tests, passed)
+    print ("%d test files, %d unit tests, %d passed" %
+           (test_files, tests, passed))
+
+
+if __name__ == '__main__':
+    main()
