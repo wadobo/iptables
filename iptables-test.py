@@ -32,11 +32,17 @@ class Colors:
 
 
 def print_error(reason, filename=None, lineno=None):
+    '''
+    Prints an error with nice colors, indicating file and line number.
+    '''
     print (filename + ": " + Colors.RED + "ERROR" +
         Colors.ENDC + ": line %d (%s)" % (lineno, reason))
 
 
 def delete_rule(iptables, rule, filename, lineno):
+    '''
+    Removes an iptables rule
+    '''
     cmd = iptables + " -D " + rule
     ret = execute_cmd(cmd, filename, lineno)
     if ret == 1:
@@ -48,6 +54,17 @@ def delete_rule(iptables, rule, filename, lineno):
 
 
 def run_test(iptables, rule, rule_save, res, filename, lineno):
+    '''
+    Executes an unit test. Returns the output of delete_rule().
+
+    Parameters:
+    :param  iptables: string with the iptables command to execute
+    :param rule: string with iptables arguments for the rule to test
+    :param rule_save: string to find the rule in the output of iptables -save
+    :param res: expected result of the rule. Valid values: "OK", "FAIL"
+    :param filename: name of the file tested (used for print_error purposes)
+    :param lineno: line number being tested (used for print_error purposes)
+    '''
     ret = 0
 
     cmd = iptables + " -A " + rule
@@ -85,6 +102,7 @@ def run_test(iptables, rule, rule_save, res, filename, lineno):
         delete_rule(iptables, rule, filename, lineno)
         return -1
 
+    # find the rule
     matching = out.find(rule_save)
     if matching < 0:
         reason = "cannot find: " + iptables + " -I " + rule
@@ -96,6 +114,14 @@ def run_test(iptables, rule, rule_save, res, filename, lineno):
 
 
 def execute_cmd(cmd, filename, lineno):
+    '''
+    Executes a command, checking for segfaults and returning the command exit
+    code.
+
+    :param cmd: string with the command to be executed
+    :param filename: name of the file tested (used for print_error purposes)
+    :param lineno: line number being tested (used for print_error purposes)
+    '''
     global log_file
     print >> log_file, "command: %s\n" % cmd
     ret = subprocess.call(cmd, shell=True, universal_newlines=True,
@@ -110,6 +136,11 @@ def execute_cmd(cmd, filename, lineno):
 
 
 def run_test_file(filename):
+    '''
+    Runs a test file
+
+    :param filename: name of the file with the test rules
+    '''
     #
     # if this is not a test file, skip.
     #
@@ -209,8 +240,7 @@ def show_missing():
 #
 # main
 #
-def main():
-    parser = argparse.ArgumentParser(description='Run iptables tests')
+def main():    parser = argparse.ArgumentParser(description='Run iptables tests')
     parser.add_argument('filename', nargs='?',
                         metavar='path/to/file.t',
                         help='Run only this test')
