@@ -18,6 +18,8 @@ import argparse
 IPTABLES = "iptables"
 IP6TABLES = "ip6tables"
 EXTENSIONS_PATH = "extensions"
+LOGFILE="/tmp/iptables-test.log"
+log_file = None
 
 
 class Colors:
@@ -29,27 +31,27 @@ class Colors:
     ENDC = '\033[0m'
 
 
-def print_error(filename, lineno, reason):
+def print_error(reason, filename=None, lineno=None):
     print (filename + ": " + Colors.RED + "ERROR" +
-           Colors.ENDC + ": line %d (%s)" % (lineno, reason))
+        Colors.ENDC + ": line %d (%s)" % (lineno, reason))
 
 
-def delete_rule(iptables, rule, filename, lineno, devnull):
+def delete_rule(iptables, rule, filename, lineno):
     cmd = iptables + " -D " + rule
-    ret = subprocess.call(cmd, stderr=devnull, shell=True)
+    ret = execute_cmd(cmd, filename, lineno)
     if ret == 1:
         reason = "cannot delete: " + iptables + " -I " + rule
-        print_error(filename, lineno, reason)
+        print_error(reason, filename, lineno)
         return -1
 
     return 0
 
 
-def run_test(iptables, rule, rule_save, res, filename, lineno, devnull):
+def run_test(iptables, rule, rule_save, res, filename, lineno):
     ret = 0
 
     cmd = iptables + " -A " + rule
-    ret = subprocess.call(cmd, stderr=devnull, shell=True)
+    ret = execute_cmd(cmd, filename, lineno)
 
     #
     # report failed test
@@ -57,7 +59,7 @@ def run_test(iptables, rule, rule_save, res, filename, lineno, devnull):
     if ret:
         if res == "OK":
             reason = "cannot load: " + cmd
-            print_error(filename, lineno, reason)
+            print_error(reason, filename, lineno)
             return -1
         else:
             # do not report this error
@@ -65,8 +67,8 @@ def run_test(iptables, rule, rule_save, res, filename, lineno, devnull):
     else:
         if res == "FAIL":
             reason = "should fail: " + cmd
-            print_error(filename, lineno, reason)
-            delete_rule(iptables, rule, filename, lineno, devnull)
+            print_error(reason, filename, lineno)
+            delete_rule(iptables, rule, filename, lineno)
             return -1
 
     matching = 0
@@ -79,22 +81,32 @@ def run_test(iptables, rule, rule_save, res, filename, lineno, devnull):
     #
     if proc.returncode == -11:
         reason = "iptables-save segfaults: " + cmd
-        print_error(filename, lineno, reason)
-        delete_rule(iptables, rule, filename, lineno, devnull)
+        print_error(reason, filename, lineno)
+        delete_rule(iptables, rule, filename, lineno)
         return -1
 
     matching = out.find(rule_save)
     if matching < 0:
         reason = "cannot find: " + iptables + " -I " + rule
-        print_error(filename, lineno, reason)
-        delete_rule(iptables, rule, filename, lineno, devnull)
+        print_error(reason, filename, lineno)
+        delete_rule(iptables, rule, filename, lineno)
         return -1
 
-    return delete_rule(iptables, rule, filename, lineno, devnull)
+    return delete_rule(iptables, rule, filename, lineno)
 
 
-def execute_cmd(external_cmd, devnull):
-    subprocess.call(external_cmd, stderr=devnull, shell=True)
+def execute_cmd(cmd, filename, lineno):
+    global log_file
+    print >> log_file, "command: %s\n" % cmd
+    ret = subprocess.call(cmd, shell=True, universal_newlines=True,
+        stderr=subprocess.STDOUT, stdout=log_file)
+    log_file.flush()
+
+    # generic check for segfaults
+    if ret  == -11:
+        reason = "command segfaults: " + cmd
+        print_error(reason, filename, lineno)
+    return ret
 
 
 def run_test_file(filename):
@@ -121,9 +133,6 @@ def run_test_file(filename):
     table = ""
     total_test_passed = True
 
-    # FIXME: better store standard error output in one log filename
-    devnull = open("/dev/null", "w")
-
     for lineno, line in enumerate(f):
         if line[0] == "#":
             continue
@@ -135,7 +144,7 @@ def run_test_file(filename):
         # external non-iptables invocation, executed as is.
         if line[0] == "!":
             external_cmd = line.rstrip()[1:]
-            execute_cmd(external_cmd, devnull)
+            execute_cmd(external_cmd, filename, lineno)
             continue
 
         if line[0] == "*":
@@ -164,7 +173,7 @@ def run_test_file(filename):
             res = item[2].rstrip()
 
             ret = run_test(iptables, rule, rule_save,
-                           res, filename, lineno + 1, devnull)
+                           res, filename, lineno + 1)
             if ret < 0:
                 test_passed = False
                 total_test_passed = False
@@ -177,7 +186,6 @@ def run_test_file(filename):
         print filename + ": " + Colors.GREEN + "OK" + Colors.ENDC
 
     f.close()
-    devnull.close()
     return tests, passed
 
 
@@ -224,6 +232,14 @@ def main():
     test_files = 0
     tests = 0
     passed = 0
+
+    # setup global var log file
+    global log_file
+    try:
+        log_file = open(LOGFILE, 'w')
+    except IOError:
+        print "Couldn't open log file %s" % LOGFILE
+        return
 
     file_list = [os.path.join(EXTENSIONS_PATH, i)
                  for i in os.listdir(EXTENSIONS_PATH)]
