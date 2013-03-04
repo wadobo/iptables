@@ -123,7 +123,7 @@ def execute_cmd(cmd, filename, lineno):
     :param lineno: line number being tested (used for print_error purposes)
     '''
     global log_file
-    print >> log_file, "command: %s\n" % cmd
+    print >> log_file, "command: %s" % cmd
     ret = subprocess.call(cmd, shell=True, universal_newlines=True,
         stderr=subprocess.STDOUT, stdout=log_file)
     log_file.flush()
@@ -240,7 +240,8 @@ def show_missing():
 #
 # main
 #
-def main():    parser = argparse.ArgumentParser(description='Run iptables tests')
+def main():
+    parser = argparse.ArgumentParser(description='Run iptables tests')
     parser.add_argument('filename', nargs='?',
                         metavar='path/to/file.t',
                         help='Run only this test')
