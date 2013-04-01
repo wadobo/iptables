@@ -17,6 +17,8 @@ import argparse
 
 IPTABLES = "iptables"
 IP6TABLES = "ip6tables"
+XTABLES4 = "xtables -4"
+XTABLES6 = "xtables -6"
 EXTENSIONS_PATH = "extensions"
 LOGFILE="/tmp/iptables-test.log"
 log_file = None
@@ -89,7 +91,10 @@ def run_test(iptables, rule, rule_save, res, filename, lineno):
             return -1
 
     matching = 0
-    proc = subprocess.Popen(iptables + "-save", stdin=subprocess.PIPE,
+    splitted = iptables.split(" ")
+    command = splitted[0] + "-save"
+    args = splitted[1:]
+    proc = subprocess.Popen(command, stdin=subprocess.PIPE,
                             stdout=subprocess.PIPE, stderr=subprocess.PIPE)
     out, err = proc.communicate()
 
@@ -147,12 +152,14 @@ def run_test_file(filename):
     if not filename.endswith(".t"):
         return 0, 0
 
-    if filename.find("libipt_") > 0:
+    if "libipt_" in filename:
         iptables = IPTABLES
-    elif filename.find("libip6t_") > 0:
+    elif "libip6t_" in filename:
         iptables = IP6TABLES
-    elif filename.find("libxt_") > 0:
-        iptables = IPTABLES
+    elif "libxt_" in filename:
+        iptables = XTABLES4
+    elif "libxt6_" in filename:
+        iptables = XTABLES6
     else:
         # default to iptables if not known prefix
         iptables = IPTABLES
